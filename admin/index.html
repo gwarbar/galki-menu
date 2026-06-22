@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Gałki — Panel Admina</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<style>
+  :root {
+    --coral: #E47972;
+    --teal: #406767;
+    --board: #FBECB3;
+    --tan: #E0C9B0;
+    --ink: #2c2723;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .handle { cursor: grab; touch-action: none; }
+  .handle:active { cursor: grabbing; }
+  .sortable-ghost { opacity: .4; }
+  .sortable-drag { opacity: 1 !important; }
+  input[type="checkbox"] { cursor: pointer; }
+  select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239a8166' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px !important; }
+</style>
+</head>
+<body class="min-h-screen" style="background:#FBECB3">
+
+<!-- PIN overlay -->
+<div id="pinOverlay" class="fixed inset-0 z-50 flex items-center justify-center" style="background:#FBECB3">
+  <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-xs mx-4 text-center">
+    <img src="../brand/logo-cut.png" alt="Gałki" class="h-16 mx-auto mb-4 object-contain" onerror="this.style.display='none'">
+    <h1 class="text-xl font-black mb-1" style="color:#2c2723">Panel Admina</h1>
+    <p class="text-sm mb-5" style="color:#9a8166">Wprowadź PIN</p>
+    <input
+      type="password"
+      id="pinInput"
+      maxlength="4"
+      inputmode="numeric"
+      autocomplete="current-password"
+      placeholder="••••"
+      class="w-full text-center text-3xl font-black tracking-[0.4em] rounded-xl p-3 mb-3 outline-none border-2 transition-colors"
+      style="border-color:#E0C9B0; color:#2c2723"
+      onfocus="this.style.borderColor='#E47972'"
+      onblur="this.style.borderColor='#E0C9B0'"
+    >
+    <button
+      onclick="checkPin()"
+      class="w-full text-white font-bold py-3 rounded-xl transition-opacity hover:opacity-90"
+      style="background:#E47972"
+    >Zaloguj</button>
+    <p id="pinError" class="text-red-500 text-sm mt-2" style="display:none">Nieprawidłowy PIN</p>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" style="display:none" class="max-w-2xl mx-auto px-4 pt-4 pb-24">
+
+  <!-- API URL (hidden — hardcoded in JS) -->
+  <input type="hidden" id="apiUrl">
+
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-4">
+    <button
+      id="btnTabSmaki"
+      onclick="switchTab('smaki')"
+      class="flex-1 py-2.5 rounded-xl font-bold text-sm transition-all"
+      style="background:#E47972; color:white"
+    >Smaki</button>
+    <button
+      id="btnTabPolewki"
+      onclick="switchTab('polewki')"
+      class="flex-1 py-2.5 rounded-xl font-bold text-sm transition-all bg-white"
+      style="color:#9a8166"
+    >Polewy</button>
+  </div>
+
+  <!-- SMAKI tab -->
+  <div id="tabSmaki">
+    <!-- Legend -->
+    <div class="flex items-center gap-3 px-1 mb-2 text-xs font-bold uppercase tracking-wider" style="color:#9a8166">
+      <span class="w-5 flex-shrink-0"></span>
+      <span class="w-5 flex-shrink-0 text-center" title="Aktywny">✓</span>
+      <span class="w-5 flex-shrink-0 text-center" title="Chwilowy brak">✕</span>
+      <span class="w-5 flex-shrink-0 text-center" title="Alkoholowe">🍸</span>
+      <span class="w-5 flex-shrink-0 text-center" title="Wegańskie">🌿</span>
+      <span class="flex-1">Nazwa PL</span>
+      <span class="w-36 flex-shrink-0">Nazwa EN</span>
+      <span class="w-28 flex-shrink-0">Kategoria</span>
+      <span class="w-5 flex-shrink-0"></span>
+    </div>
+    <div id="smakiList" class="space-y-2 mb-4"></div>
+    <button
+      onclick="addSmak()"
+      class="w-full py-3 rounded-xl font-bold text-sm border-2 border-dashed transition-opacity hover:opacity-70"
+      style="border-color:#E47972; color:#E47972; background:transparent"
+    >+ Dodaj smak</button>
+  </div>
+
+  <!-- POLEWKI tab -->
+  <div id="tabPolewki" style="display:none">
+    <div class="flex items-center gap-3 px-1 mb-2 text-xs font-bold uppercase tracking-wider" style="color:#9a8166">
+      <span class="w-5 flex-shrink-0"></span>
+      <span class="w-5 flex-shrink-0 text-center" title="Aktywna">✓</span>
+      <span class="w-5 flex-shrink-0 text-center" title="Chwilowy brak">✕</span>
+      <span class="w-5 flex-shrink-0 text-center" title="Alkoholowe">🍸</span>
+      <span class="w-5 flex-shrink-0 text-center" title="Wegańskie">🌿</span>
+      <span class="flex-1">Nazwa PL</span>
+      <span class="w-32 flex-shrink-0">Nazwa EN</span>
+      <span class="w-5 flex-shrink-0"></span>
+    </div>
+    <div id="polewkiList" class="space-y-2 mb-4"></div>
+    <button
+      onclick="addPolewka()"
+      class="w-full py-3 rounded-xl font-bold text-sm border-2 border-dashed transition-opacity hover:opacity-70"
+      style="border-color:#406767; color:#406767; background:transparent"
+    >+ Dodaj polewę</button>
+  </div>
+
+</div>
+
+<!-- Sticky save bar -->
+<div id="saveBar" style="display:none" class="fixed bottom-0 left-0 right-0 p-4 flex gap-3 border-t" style="background:white">
+  <div class="max-w-2xl mx-auto w-full flex gap-3">
+    <button
+      onclick="loadFromApi()"
+      class="py-3 px-5 rounded-xl font-bold text-sm border-2 transition-opacity hover:opacity-70 flex-shrink-0"
+      style="border-color:#E0C9B0; color:#9a8166; background:white"
+    >↺ Odśwież</button>
+    <button
+      onclick="save()"
+      class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-opacity hover:opacity-90"
+      style="background:#2c2723"
+    >💾 Zapisz zmiany</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div
+  id="toast"
+  class="fixed bottom-20 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl text-sm font-bold text-white z-50 transition-all"
+  style="background:#2c2723; display:none; white-space:nowrap"
+></div>
+
+<script>
+  /* ── CONFIG ─────────────────────────────────────────────────────────── */
+  const PIN = '2137';
+  const HARDCODED_API_URL = 'https://script.google.com/macros/s/AKfycbyFBKd_l0SuM7qJO5qZDwm-eWHqhRYXa4HUaRx4QkZcvMgl40VAe9zMMW5NYSYOt07B/exec';
+
+  function checkPin() {
+    const val = document.getElementById('pinInput').value;
+    if (val === PIN) {
+      document.getElementById('pinOverlay').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('saveBar').style.display = 'block';
+      loadFromStorage();
+    } else {
+      document.getElementById('pinError').style.display = 'block';
+      document.getElementById('pinInput').value = '';
+    }
+  }
+
+  document.getElementById('pinInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkPin();
+  });
+
+  /* ── State ── */
+  const CATEGORIES = ['śmietankowy', 'owocowy', 'orzechowy', 'sorbety'];
+  let smakiData = [];
+  let polewkiData = [];
+  let activeTab = 'smaki';
+  let sortableSmaki = null;
+
+  /* ── API URL ── */
+  function loadFromStorage() {
+    const saved = HARDCODED_API_URL || localStorage.getItem('galki_api_url') || '';
+    document.getElementById('apiUrl').value = saved;
+    if (saved) loadFromApi();
+  }
+
+  function saveApiUrl() {
+    const val = (document.getElementById('apiUrl').value || '').trim();
+    localStorage.setItem('galki_api_url', val);
+  }
+
+  /* ── Tabs ── */
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('tabSmaki').style.display = tab === 'smaki' ? 'block' : 'none';
+    document.getElementById('tabPolewki').style.display = tab === 'polewki' ? 'block' : 'none';
+    document.getElementById('btnTabSmaki').style.background = tab === 'smaki' ? '#E47972' : 'white';
+    document.getElementById('btnTabSmaki').style.color = tab === 'smaki' ? 'white' : '#9a8166';
+    document.getElementById('btnTabPolewki').style.background = tab === 'polewki' ? '#406767' : 'white';
+    document.getElementById('btnTabPolewki').style.color = tab === 'polewki' ? 'white' : '#9a8166';
+  }
+
+  function esc(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderSmaki() {
+    const list = document.getElementById('smakiList');
+    list.innerHTML = '';
+
+    smakiData.forEach((smak, idx) => {
+      const row = document.createElement('div');
+      row.className = 'bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm';
+      row.setAttribute('data-idx', idx);
+
+      const catOptions = CATEGORIES.map(c =>
+        `<option value="${esc(c)}"${smak.kategoria === c ? ' selected' : ''}>${esc(c)}</option>`
+      ).join('');
+
+      row.innerHTML = `
+        <span class="handle text-xl select-none flex-shrink-0" style="color:#d4c0ab;line-height:1">⠿</span>
+        <input type="checkbox" ${smak.aktywny ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#E47972"
+          title="Aktywny"
+          onchange="smakiData[${idx}].aktywny = this.checked">
+        <input type="checkbox" ${smak.brak ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#E53935"
+          title="Chwilowy brak"
+          onchange="smakiData[${idx}].brak = this.checked">
+        <input type="checkbox" ${smak.alkohol ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#9a6a2a"
+          title="Alkoholowe"
+          onchange="smakiData[${idx}].alkohol = this.checked">
+        <input type="checkbox" ${smak.wegan ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#406767"
+          title="Wegańskie"
+          onchange="smakiData[${idx}].wegan = this.checked">
+        <input type="text"
+          value="${esc(smak.nazwa)}"
+          placeholder="Nazwa PL"
+          class="flex-1 min-w-0 rounded-lg px-2.5 py-1.5 text-sm font-bold border outline-none transition-colors"
+          style="border-color:#E0C9B0; color:#2c2723"
+          onfocus="this.style.borderColor='#E47972'"
+          onblur="this.style.borderColor='#E0C9B0'"
+          oninput="smakiData[${idx}].nazwa = this.value">
+        <input type="text"
+          value="${esc(smak.nazwa_en || '')}"
+          placeholder="Nazwa EN"
+          class="flex-shrink-0 rounded-lg px-2.5 py-1.5 text-sm border outline-none transition-colors"
+          style="width:144px; border-color:#E0C9B0; color:#2c2723"
+          onfocus="this.style.borderColor='#E47972'"
+          onblur="this.style.borderColor='#E0C9B0'"
+          oninput="smakiData[${idx}].nazwa_en = this.value">
+        <select
+          class="rounded-lg px-2.5 py-1.5 text-xs font-bold border outline-none flex-shrink-0"
+          style="width:116px; border-color:#E0C9B0; color:#2c2723; background-color:white"
+          onchange="smakiData[${idx}].kategoria = this.value">
+          ${catOptions}
+        </select>
+        <button onclick="deleteSmak(${idx})"
+          class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-sm font-bold transition-colors hover:bg-red-50"
+          style="color:#d4c0ab" onmouseenter="this.style.color='#E53935'" onmouseleave="this.style.color='#d4c0ab'">×</button>
+      `;
+      list.appendChild(row);
+    });
+
+    if (sortableSmaki) sortableSmaki.destroy();
+    sortableSmaki = Sortable.create(list, {
+      handle: '.handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      onEnd(evt) {
+        const [moved] = smakiData.splice(evt.oldIndex, 1);
+        smakiData.splice(evt.newIndex, 0, moved);
+        smakiData.forEach((s, i) => { s.kolejnosc = i + 1; });
+        renderSmaki();
+      }
+    });
+  }
+
+  let sortablePolewki = null;
+
+  function renderPolewki() {
+    const list = document.getElementById('polewkiList');
+    list.innerHTML = '';
+
+    polewkiData.forEach((p, idx) => {
+      const row = document.createElement('div');
+      row.className = 'bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm';
+      row.setAttribute('data-idx', idx);
+
+      row.innerHTML = `
+        <span class="handle text-xl select-none flex-shrink-0" style="color:#d4c0ab;line-height:1;cursor:grab">⠿</span>
+        <input type="checkbox" ${p.aktywny ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#406767"
+          title="Aktywna"
+          onchange="polewkiData[${idx}].aktywny = this.checked">
+        <input type="checkbox" ${p.brak ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#E53935"
+          title="Chwilowy brak"
+          onchange="polewkiData[${idx}].brak = this.checked">
+        <input type="checkbox" ${p.alkohol ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#9a6a2a"
+          title="Alkoholowe"
+          onchange="polewkiData[${idx}].alkohol = this.checked">
+        <input type="checkbox" ${p.wegan ? 'checked' : ''}
+          class="w-5 h-5 flex-shrink-0 rounded"
+          style="accent-color:#406767"
+          title="Wegańskie"
+          onchange="polewkiData[${idx}].wegan = this.checked">
+        <input type="text"
+          value="${esc(p.nazwa)}"
+          placeholder="Nazwa PL"
+          class="flex-1 min-w-0 rounded-lg px-2.5 py-1.5 text-sm font-bold border outline-none transition-colors"
+          style="border-color:#E0C9B0; color:#2c2723"
+          onfocus="this.style.borderColor='#406767'"
+          onblur="this.style.borderColor='#E0C9B0'"
+          oninput="polewkiData[${idx}].nazwa = this.value">
+        <input type="text"
+          value="${esc(p.nazwa_en || '')}"
+          placeholder="Nazwa EN"
+          class="flex-shrink-0 rounded-lg px-2.5 py-1.5 text-sm border outline-none transition-colors"
+          style="width:128px; border-color:#E0C9B0; color:#2c2723"
+          onfocus="this.style.borderColor='#406767'"
+          onblur="this.style.borderColor='#E0C9B0'"
+          oninput="polewkiData[${idx}].nazwa_en = this.value">
+        <button onclick="deletePolewka(${idx})"
+          class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-sm font-bold transition-colors"
+          style="color:#d4c0ab" onmouseenter="this.style.color='#E53935'" onmouseleave="this.style.color='#d4c0ab'">×</button>
+      `;
+      list.appendChild(row);
+    });
+
+    if (sortablePolewki) sortablePolewki.destroy();
+    sortablePolewki = Sortable.create(list, {
+      handle: '.handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      onEnd(evt) {
+        const [moved] = polewkiData.splice(evt.oldIndex, 1);
+        polewkiData.splice(evt.newIndex, 0, moved);
+        renderPolewki();
+      }
+    });
+  }
+
+  /* ── CRUD ── */
+  function addSmak() {
+    smakiData.push({
+      nazwa: '', nazwa_en: '', kategoria: 'śmietankowy',
+      aktywny: true, brak: false, alkohol: false, wegan: false,
+      kolejnosc: smakiData.length + 1
+    });
+    renderSmaki();
+    /* Focus the new name input */
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('#smakiList input[type="text"]');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    }, 50);
+  }
+
+  function deleteSmak(idx) {
+    smakiData.splice(idx, 1);
+    smakiData.forEach((s, i) => { s.kolejnosc = i + 1; });
+    renderSmaki();
+  }
+
+  function addPolewka() {
+    polewkiData.push({ nazwa: '', nazwa_en: '', aktywny: true, brak: false, alkohol: false, wegan: false });
+    renderPolewki();
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('#polewkiList input[type="text"]');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    }, 50);
+  }
+
+  function deletePolewka(idx) {
+    polewkiData.splice(idx, 1);
+    renderPolewki();
+  }
+
+  /* ── Load from API ── */
+  async function loadFromApi() {
+    const url = (document.getElementById('apiUrl').value || '').trim();
+    if (!url) return;
+    saveApiUrl();
+    try {
+      showToast('Ładowanie…');
+      const res = await fetch(url + '?action=flavors&_=' + Date.now());
+      const data = await res.json();
+      smakiData = data.smaki || [];
+      polewkiData = data.polewki || [];
+      renderSmaki();
+      renderPolewki();
+      showToast('Załadowano ✓');
+    } catch (e) {
+      showToast('Błąd ładowania — sprawdź URL');
+    }
+  }
+
+  /* ── Save to API ── */
+  async function save() {
+    const url = (document.getElementById('apiUrl').value || '').trim();
+    if (!url) { showToast('Wpisz URL Apps Script'); return; }
+    saveApiUrl();
+
+    smakiData.forEach((s, i) => { s.kolejnosc = i + 1; });
+
+    const payload = JSON.stringify({
+      pin: PIN,
+      action: 'save',
+      data: { smaki: smakiData, polewki: polewkiData }
+    });
+
+    try {
+      showToast('Zapisywanie…');
+      /* Use text/plain to avoid CORS preflight with Apps Script */
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      });
+      const result = await res.json();
+      if (result.ok) {
+        showToast('Zapisano ✓');
+      } else {
+        showToast('Błąd: ' + (result.error || 'nieznany'));
+      }
+    } catch (e) {
+      showToast('Błąd połączenia z API');
+    }
+  }
+
+  /* ── Toast ── */
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.display = 'none'; }, 2500);
+  }
+</script>
+</body>
+</html>

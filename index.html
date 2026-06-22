@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gałki — Tablica Smaków</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FEEED8;
+    --board: #FBECB3;
+    --coral: #E47972;
+    --teal: #406767;
+    --orange: #CF8326;
+    --tan: #E0C9B0;
+    --ink: #2c2723;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--board);
+    overflow: hidden;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  /* ── scaling stage ── */
+  #viewport {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--board);
+  }
+
+  #stage {
+    width: 1920px; height: 1080px;
+    -webkit-flex-shrink: 0; flex-shrink: 0; /* prevent flex parent from shrinking stage */
+    position: relative;
+    -webkit-transform-origin: center center;
+    transform-origin: center center;
+    background: #FBECB3;
+    overflow: hidden;
+    padding: 38px 60px 16px;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+  }
+
+  /* ambient warm light */
+  #stage::before {
+    content: "";
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 1400px 600px at 50% -5%, rgba(255,220,130,.38), transparent 65%);
+  }
+
+  /* corner dot */
+  .dot {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--tan);
+    top: 28px; left: 64px;
+  }
+
+  /* ── header ── */
+  header {
+    display: flex;
+    justify-content: center;
+    position: relative; z-index: 2;
+    margin-bottom: 10px;
+  }
+  .logo {
+    height: 110px; width: auto;
+    filter: drop-shadow(0 6px 16px rgba(228,121,114,.30));
+  }
+
+  /* ── SMAKI section ── */
+  .smaki { position: relative; z-index: 2; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; margin-bottom: 12px; }
+  .smaki-head { margin-bottom: 8px; }
+  .smaki-head { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+  .smaki-head h2 { margin-right: 16px; }
+  .smaki-head .price-chip { margin-right: 16px; }
+  .smaki-head h2 {
+    font-weight: 900; font-size: 28px; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--ink);
+    flex-shrink: 0; white-space: nowrap;
+  }
+
+  .price-chip {
+    display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+    background: rgba(255,255,255,.60); border-radius: 14px;
+    padding: 8px 22px; -webkit-flex-shrink: 0; flex-shrink: 0;
+    box-shadow: 0 2px 8px -2px rgba(64,53,40,.12);
+  }
+  .price-chip > * { margin-right: 16px; }
+  .price-chip > *:last-child { margin-right: 0; }
+  .pc-div { width: 1.5px; height: 48px; background: #E0C9B0; -webkit-flex-shrink: 0; flex-shrink: 0; }
+  .pc-item { display: -webkit-flex; display: flex; -webkit-flex-direction: row; flex-direction: row; -webkit-align-items: baseline; align-items: baseline; }
+  .pc-item b { margin-left: 10px; }
+  .pc-item b:first-child { margin-left: 0; }
+  .pc-item em {
+    font-style: normal; font-weight: 600; font-size: 15px;
+    letter-spacing: .03em; text-transform: uppercase;
+    color: #9a8166; white-space: nowrap;
+  }
+  .pc-item b { font-weight: 900; font-size: 36px; color: var(--coral); white-space: nowrap; line-height: 1; }
+  .pc-item b.teal { color: var(--teal); }
+
+  .wave-rule { flex: 1; height: 14px; }
+
+  /* ── SMAKI grid: flex wrap, sizes set by JS ── */
+  #smakiGrid {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-wrap: wrap;
+    flex-wrap: wrap;
+    overflow: hidden;
+  }
+
+  /* ── flavor cards ── */
+  .flavor-card {
+    border-radius: 14px; overflow: hidden;
+    background: var(--cream);
+    box-shadow: 0 12px 28px -14px rgba(40,28,16,.50), 0 2px 6px -2px rgba(40,28,16,.14);
+    outline: 1px solid rgba(64,53,40,.07); outline-offset: -1px;
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+
+  .fc-dots { display: flex; justify-content: space-between; padding: 10px 12px 0; flex-shrink: 0; }
+  .fc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tan); }
+
+  /* English label — fixed position, always same height across cards */
+  .fc-en {
+    padding: 4px 18px 0;
+    flex-shrink: 0;
+    min-height: 22px;
+  }
+  .fc-eyebrow {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--coral);
+  }
+
+  /* Polish name — centered in remaining space */
+  .fc-body {
+    -webkit-flex: 1; flex: 1; padding: 2px 18px 6px;
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    -webkit-justify-content: center; justify-content: center;
+  }
+  .fc-body > * { margin-bottom: 4px; }
+  .fc-body > *:last-child { margin-bottom: 0; }
+  .fc-name {
+    font-size: 30px; font-weight: 900;
+    color: var(--ink); line-height: 1.1;
+  }
+  .fc-name.fc-name-md { font-size: 24px; }
+  .fc-name.fc-name-sm { font-size: 20px; }
+
+  .flavor-card.brak .fc-name { text-decoration: line-through; opacity: 0.4; }
+  .flavor-card.brak .fc-eyebrow { opacity: 0.4; }
+
+  .brak-badge {
+    position: absolute; top: 10px; right: 10px;
+    background: #E53935; color: white;
+    font-size: 11px; font-weight: 800; letter-spacing: .06em;
+    padding: 2px 8px; border-radius: 6px;
+    z-index: 1;
+  }
+
+  /* ── card flags (shared base) ── */
+  .alc-flag, .wegan-flag {
+    display: -webkit-inline-flex; display: inline-flex;
+    -webkit-align-items: center; align-items: center;
+    border-radius: 20px; padding: 2px 8px 2px 6px;
+    -webkit-align-self: flex-start; align-self: flex-start;
+  }
+  .alc-flag svg, .wegan-flag svg { margin-right: 4px; }
+  .alc-flag svg, .wegan-flag svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .alc-flag span, .wegan-flag span {
+    font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .alc-flag   { background: rgba(207,131,38,.15); }
+  .alc-flag span   { color: var(--orange); }
+  .wegan-flag { background: rgba(64,103,103,.13); }
+  .wegan-flag span { color: var(--teal); }
+
+  .fc-wave { width: 100%; height: 72px; display: block; flex-shrink: 0; }
+  .fc-wave .wave-fill { fill: var(--coral); }
+  .flavor-card.brak .fc-wave .wave-fill { fill: #d4c0ab; }
+
+
+  /* ── bottom row: POLEWY ── */
+  .bottom {
+    position: relative; z-index: 2;
+    -webkit-flex-shrink: 0; flex-shrink: 0;
+    height: 205px;
+    display: -webkit-flex;
+    display: flex;
+    margin-bottom: 10px;
+  }
+  .grp { display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; }
+  .grp-polewy { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; overflow: hidden; }
+
+  .ghead { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-flex-shrink: 0; flex-shrink: 0; margin-bottom: 10px; }
+  .ghead > * { margin-right: 14px; }
+  .ghead > *:last-child { margin-right: 0; }
+  .ghead h3 {
+    font-weight: 900; font-size: 24px; letter-spacing: .05em;
+    text-transform: uppercase; color: #2c2723;
+    -webkit-flex-shrink: 0; flex-shrink: 0; white-space: nowrap;
+  }
+  .ghead h3.orange { color: #CF8326; }
+  .ghead .wave-rule { -webkit-flex: 1; flex: 1; }
+
+  /* ── polewy tabliczki — flex row, heights set by JS ── */
+  .polewy-grid {
+    -webkit-flex: 1; flex: 1;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-wrap: nowrap;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .tabliczka {
+    -webkit-flex: 1; flex: 1;
+    min-width: 0;
+    border-radius: 14px; overflow: hidden;
+    background: #FEEED8;
+    box-shadow: 0 12px 28px -14px rgba(40,28,16,.50), 0 2px 6px -2px rgba(40,28,16,.14);
+    position: relative;
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    /* height set by JS fitLayout() */
+  }
+  .t-dots { display: -webkit-flex; display: flex; -webkit-justify-content: space-between; justify-content: space-between; padding: 8px 10px 0; -webkit-flex-shrink: 0; flex-shrink: 0; }
+  .t-dot  { width: 6px; height: 6px; border-radius: 50%; background: #E0C9B0; }
+  .t-en { padding: 2px 12px 0; -webkit-flex-shrink: 0; flex-shrink: 0; min-height: 18px; }
+  .t-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #406767; }
+  .tabliczka.brak .t-eyebrow { opacity: 0.4; }
+  .t-body {
+    -webkit-flex: 1; flex: 1; padding: 2px 12px 4px;
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    -webkit-justify-content: center; justify-content: center;
+  }
+  .t-name { font-size: 22px; font-weight: 900; color: #2c2723; line-height: 1.15; }
+  .tabliczka.brak .t-name { text-decoration: line-through; opacity: 0.4; }
+  .t-wave { width: 100%; height: 52px; display: block; -webkit-flex-shrink: 0; flex-shrink: 0; }
+  .t-wave .t-wave-fill { fill: #406767; }
+  .tabliczka.brak .t-wave .t-wave-fill { fill: #d4c0ab; }
+
+  /* ── icedog standalone row ── */
+  .icedog-row {
+    position: relative; z-index: 2;
+    display: -webkit-flex; display: flex;
+    -webkit-justify-content: center; justify-content: center;
+    margin-bottom: 8px;
+  }
+  .icedog-row .tabliczka { -webkit-flex: none; flex: none; width: 240px; /* height set by JS */ }
+
+  /* ── footer ── */
+  footer {
+    position: relative; z-index: 2;
+    margin-top: auto;
+    display: -webkit-flex; display: flex;
+    -webkit-align-items: center; align-items: center;
+    -webkit-justify-content: center; justify-content: center;
+    padding: 8px 0 2px;
+    border-top: 1.5px solid rgba(64,53,40,.12);
+  }
+  .icedog-price {
+    display: -webkit-flex; display: flex;
+    -webkit-align-items: center; align-items: center;
+    background: rgba(255,255,255,.5); border-radius: 10px; padding: 6px 18px;
+  }
+  .icedog-price > * { margin-right: 10px; }
+  .icedog-price > *:last-child { margin-right: 0; }
+  .fp-paw { width: 22px; height: 22px; }
+  .fp-label { font-weight: 800; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: #CF8326; }
+  .fp-name { font-weight: 900; font-size: 18px; letter-spacing: .02em; color: #2c2723; }
+  .fp-val { font-weight: 900; font-size: 28px; color: #CF8326; white-space: nowrap; }
+  .fp-sep { width: 1px; height: 30px; background: #E0C9B0; margin: 0 4px; }
+
+  /* ── setup overlay ── */
+  #setup {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 100;
+    background: var(--board);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Poppins', sans-serif;
+  }
+  #setup .box {
+    background: white; border-radius: 20px;
+    padding: 48px 40px; max-width: 520px; width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.15);
+  }
+  #setup .setup-logo { height: 80px; margin-bottom: 20px; }
+  #setup h1 { font-size: 26px; font-weight: 900; color: var(--ink); margin-bottom: 8px; }
+  #setup p { color: #9a8166; font-size: 15px; margin-bottom: 28px; line-height: 1.6; }
+  #setup input {
+    width: 100%; padding: 14px 16px;
+    border: 2px solid var(--tan); border-radius: 12px;
+    font-size: 14px; font-family: inherit; font-weight: 500;
+    margin-bottom: 16px; color: var(--ink);
+    outline: none; transition: border-color .15s;
+  }
+  #setup input:focus { border-color: var(--coral); }
+  #setup button {
+    background: var(--coral); color: white; border: none;
+    padding: 14px 36px; border-radius: 12px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: opacity .15s;
+  }
+  #setup button:hover { opacity: .85; }
+</style>
+</head>
+<body>
+
+<!-- Setup overlay — shown when no API URL is configured -->
+<div id="setup" style="display:none">
+  <div class="box">
+    <img class="setup-logo" src="brand/logo-cut.png" alt="Gałki" onerror="this.style.display='none'">
+    <h1>Konfiguracja wyświetlacza</h1>
+    <p>Wklej URL swojego Google Apps Script,<br>aby załadować smaki i polewy.</p>
+    <input type="url" id="setupUrl" placeholder="https://script.google.com/macros/s/…/exec">
+    <br>
+    <button onclick="saveSetupUrl()">Uruchom wyświetlacz</button>
+  </div>
+</div>
+
+<div id="viewport">
+  <div id="stage">
+    <span class="dot"></span>
+
+    <header>
+      <img class="logo" src="brand/logo-cut.png" alt="Gałki">
+    </header>
+
+    <!-- SMAKI -->
+    <section class="smaki">
+      <div class="smaki-head">
+        <h2>Gałka 70g <span style="color:var(--coral);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;opacity:.75">Scoop</span></h2>
+        <div class="price-chip">
+          <div class="pc-item"><b>9 zł</b><em>Bezalkoholowe</em></div>
+          <div class="pc-div"></div>
+          <div class="pc-item"><b>15 zł</b><em>Alkoholowe</em></div>
+        </div>
+        <svg class="wave-rule" id="waveSmaki" preserveAspectRatio="none" viewBox="0 0 800 14"></svg>
+      </div>
+      <div id="smakiGrid"></div>
+    </section>
+
+    <!-- BOTTOM: POLEWY + DLA PUPILA -->
+    <div class="bottom">
+      <div class="grp grp-polewy">
+        <div class="ghead">
+          <h3>Polewy <span style="color:var(--teal);font-weight:700;font-size:17px;letter-spacing:.06em;text-transform:uppercase;opacity:.75">Topping</span></h3>
+          <div class="price-chip">
+            <div class="pc-item"><b class="teal">6 zł</b><em>Bezalkoholowe</em></div>
+            <div class="pc-div"></div>
+            <div class="pc-item"><b class="teal">8 zł</b><em>Alkoholowe</em></div>
+          </div>
+          <svg class="wave-rule" id="wavePolewy" preserveAspectRatio="none" viewBox="0 0 800 12"></svg>
+        </div>
+        <div class="polewy-grid" id="polewyPills"></div>
+      </div>
+    </div>
+
+    <!-- ICEDOG — osobny rząd nad stopką -->
+    <div class="icedog-row">
+      <div class="tabliczka tabliczka-icedog">
+        <div class="t-dots"><span class="t-dot"></span><span class="t-dot"></span></div>
+        <div class="t-en"><div class="t-eyebrow" style="color:var(--orange)">For Your Pet</div></div>
+        <div class="t-body">
+          <div class="t-name">Ice Dog</div>
+          <div style="display:inline-flex;align-items:center;background:rgba(207,131,38,.15);border-radius:20px;padding:2px 8px 2px 6px;align-self:flex-start">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--orange)">
+              <ellipse cx="6" cy="9" rx="2.1" ry="2.8"/>
+              <ellipse cx="11" cy="6.4" rx="2.1" ry="2.9"/>
+              <ellipse cx="16.6" cy="8.2" rx="2.1" ry="2.8"/>
+              <path d="M11 11c3.5 0 6 2.3 6 4.6 0 1.7-1.6 2.4-3.4 2.4-1 0-1.7-.4-2.6-.4s-1.6.4-2.6.4C6.6 18 5 17.3 5 15.6 5 13.3 7.5 11 11 11z"/>
+            </svg>
+            <span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--orange)">Dla pupila</span>
+          </div>
+        </div>
+        <svg class="t-wave" viewBox="0 0 400 50" preserveAspectRatio="none">
+          <path class="t-wave-fill" style="fill:var(--orange)" d="M0,25 Q33,8 66,25 Q100,42 133,25 Q166,8 200,25 Q233,42 266,25 Q300,8 333,25 Q366,42 400,25 L400,50 L0,50 Z"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- FOOTER: ICEDOG PRICE -->
+    <footer>
+      <div class="icedog-price">
+        <svg class="fp-paw" viewBox="0 0 24 24" fill="var(--orange)" aria-hidden="true">
+          <ellipse cx="6" cy="9" rx="2.1" ry="2.8"/>
+          <ellipse cx="11" cy="6.4" rx="2.1" ry="2.9"/>
+          <ellipse cx="16.6" cy="8.2" rx="2.1" ry="2.8"/>
+          <path d="M11 11c3.5 0 6 2.3 6 4.6 0 1.7-1.6 2.4-3.4 2.4-1 0-1.7-.4-2.6-.4s-1.6.4-2.6.4C6.6 18 5 17.3 5 15.6 5 13.3 7.5 11 11 11z"/>
+        </svg>
+        <div class="fp-label">Icedog</div>
+        <div class="fp-sep"></div>
+        <div class="fp-name">Lód dla pupili</div>
+        <div class="fp-sep"></div>
+        <div class="fp-val">15 zł</div>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<script>
+  /* ── CONFIG ──────────────────────────────────────────────────────────────
+     Hardcode the Apps Script URL here to skip the setup overlay on the TV.
+     Leave empty to use the URL saved in localStorage (set via admin panel). */
+  const HARDCODED_API_URL = 'https://script.google.com/macros/s/AKfycbyFBKd_l0SuM7qJO5qZDwm-eWHqhRYXa4HUaRx4QkZcvMgl40VAe9zMMW5NYSYOt07B/exec';
+
+  /* ── MOCK DATA — ustaw na null żeby wyłączyć i używać prawdziwego API ──── */
+  const MOCK_DATA = null;
+  /* ─────────────────────────────────────────────────────────────────────── */
+
+  const CATEGORY_ORDER = ['śmietankowy', 'owocowy', 'orzechowy', 'sorbety'];
+
+  /* Filled wave SVG path for card bottoms */
+  const WAVE_PATH = 'M0,25 Q33,8 66,25 Q100,42 133,25 Q166,8 200,25 Q233,42 266,25 Q300,8 333,25 Q366,42 400,25 L400,50 L0,50 Z';
+
+  let apiUrl = HARDCODED_API_URL || localStorage.getItem('galki_api_url') || '';
+  let lastUpdate = 0;
+  let cachedData = null;
+  let pollTimer = null;
+
+  /* ── Setup overlay ── */
+  function saveSetupUrl() {
+    const val = (document.getElementById('setupUrl').value || '').trim();
+    if (!val) return;
+    apiUrl = val;
+    localStorage.setItem('galki_api_url', val);
+    document.getElementById('setup').style.display = 'none';
+    init();
+  }
+
+  /* ── Card builder ── */
+  function buildFlavorCard(smak) {
+    const card = document.createElement('div');
+    card.className = 'flavor-card' + (smak.brak ? ' brak' : '');
+
+    /* top dots */
+    const dots = document.createElement('div');
+    dots.className = 'fc-dots';
+    dots.innerHTML = '<span class="fc-dot"></span><span class="fc-dot"></span>';
+    card.appendChild(dots);
+
+    /* English label — always same vertical position */
+    const en = document.createElement('div');
+    en.className = 'fc-en';
+    if (smak.nazwa_en) {
+      const eyebrow = document.createElement('div');
+      eyebrow.className = 'fc-eyebrow';
+      eyebrow.textContent = smak.nazwa_en;
+      en.appendChild(eyebrow);
+    }
+    card.appendChild(en);
+
+    /* Polish name — centered, font scaled by length */
+    const body = document.createElement('div');
+    body.className = 'fc-body';
+
+    const name = document.createElement('div');
+    const len = (smak.nazwa || '').length;
+    name.className = 'fc-name' + (len > 20 ? ' fc-name-sm' : len > 13 ? ' fc-name-md' : '');
+    name.textContent = smak.nazwa;
+    body.appendChild(name);
+
+    if (smak.alkohol) {
+      const flag = document.createElement('div');
+      flag.className = 'alc-flag';
+      flag.innerHTML = `<svg viewBox="0 0 24 24" fill="var(--orange)"><path d="M8.1 2h7.8l-1 5H9.1L8.1 2zm-.6 7h8.9l-2.8 7.5H10.4L7.5 9zm2.9 9.5h3.1L12 22l-1.6-3.5z"/></svg><span>Alkohol</span>`;
+      body.appendChild(flag);
+    }
+    if (smak.wegan) {
+      const flag = document.createElement('div');
+      flag.className = 'wegan-flag';
+      flag.innerHTML = `<svg viewBox="0 0 24 24" fill="var(--teal)"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2S6 5 6 12s4 5 4 5"/></svg><span>Vegan</span>`;
+      body.appendChild(flag);
+    }
+
+    card.appendChild(body);
+
+    if (smak.brak) {
+      const badge = document.createElement('div');
+      badge.className = 'brak-badge';
+      badge.textContent = 'BRAK';
+      card.appendChild(badge);
+    }
+
+    const wave = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    wave.setAttribute('class', 'fc-wave');
+    wave.setAttribute('viewBox', '0 0 400 50');
+    wave.setAttribute('preserveAspectRatio', 'none');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('class', 'wave-fill');
+    path.setAttribute('d', WAVE_PATH);
+    wave.appendChild(path);
+    card.appendChild(wave);
+
+    return card;
+  }
+
+  /* ── Render ── */
+  function render(data) {
+    const grid = document.getElementById('smakiGrid');
+    const pillsContainer = document.getElementById('polewyPills');
+    grid.innerHTML = '';
+    pillsContainer.innerHTML = '';
+
+    /* Active smaki — sort by category order, then by kolejnosc */
+    const smaki = (data.smaki || [])
+      .filter(s => s.aktywny)
+      .sort((a, b) => {
+        const ca = CATEGORY_ORDER.indexOf(a.kategoria);
+        const cb = CATEGORY_ORDER.indexOf(b.kategoria);
+        const catDiff = (ca === -1 ? 99 : ca) - (cb === -1 ? 99 : cb);
+        if (catDiff !== 0) return catDiff;
+        return (a.kolejnosc || 0) - (b.kolejnosc || 0);
+      });
+
+    smaki.forEach(smak => grid.appendChild(buildFlavorCard(smak)));
+
+    /* columns handled by fitLayout() via explicit card widths */
+
+    /* Active polewy tabliczki */
+    const activePolewy = (data.polewki || []).filter(p => p.aktywny);
+
+    activePolewy.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'tabliczka' + (p.brak ? ' brak' : '');
+
+        /* dots */
+        const dots = document.createElement('div');
+        dots.className = 't-dots';
+        dots.innerHTML = '<span class="t-dot"></span><span class="t-dot"></span>';
+        card.appendChild(dots);
+
+        /* English label */
+        const en = document.createElement('div');
+        en.className = 't-en';
+        if (p.nazwa_en) {
+          const ey = document.createElement('div');
+          ey.className = 't-eyebrow';
+          ey.textContent = p.nazwa_en;
+          en.appendChild(ey);
+        }
+        card.appendChild(en);
+
+        /* Polish name + flags in-flow (same structure as smaki fc-body) */
+        const body = document.createElement('div');
+        body.className = 't-body';
+        const name = document.createElement('div');
+        name.className = 't-name';
+        name.textContent = p.nazwa;
+        body.appendChild(name);
+        if (p.alkohol) {
+          const flag = document.createElement('div');
+          flag.className = 'alc-flag';
+          flag.innerHTML = `<svg viewBox="0 0 24 24" fill="var(--orange)"><path d="M8.1 2h7.8l-1 5H9.1L8.1 2zm-.6 7h8.9l-2.8 7.5H10.4L7.5 9zm2.9 9.5h3.1L12 22l-1.6-3.5z"/></svg><span>Alkohol</span>`;
+          body.appendChild(flag);
+        }
+        if (p.wegan) {
+          const flag = document.createElement('div');
+          flag.className = 'wegan-flag';
+          flag.innerHTML = `<svg viewBox="0 0 24 24" fill="var(--teal)"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-8 2S6 5 6 12s4 5 4 5"/></svg><span>Vegan</span>`;
+          body.appendChild(flag);
+        }
+        card.appendChild(body);
+
+        if (p.brak) {
+          const badge = document.createElement('div');
+          badge.className = 'brak-badge';
+          badge.textContent = 'BRAK';
+          card.appendChild(badge);
+        }
+
+        const wave = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        wave.setAttribute('class', 't-wave');
+        wave.setAttribute('viewBox', '0 0 400 50');
+        wave.setAttribute('preserveAspectRatio', 'none');
+        const wpath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        wpath.setAttribute('class', 't-wave-fill');
+        wpath.setAttribute('d', WAVE_PATH);
+        wave.appendChild(wpath);
+        card.appendChild(wave);
+
+        pillsContainer.appendChild(card);
+      });
+
+    /* sizes set by fitLayout() */
+    requestAnimationFrame(fitLayout);
+  }
+
+  /* ── API ── */
+  async function fetchFlavors() {
+    if (!apiUrl) return;
+    try {
+      const res = await fetch(apiUrl + '?action=flavors&_=' + Date.now());
+      const data = await res.json();
+      lastUpdate = data.lastUpdate;
+      cachedData = data;
+      render(data);
+    } catch (e) {
+      if (cachedData) render(cachedData);
+    }
+  }
+
+  async function ping() {
+    if (!apiUrl) return;
+    try {
+      const res = await fetch(apiUrl + '?action=ping&_=' + Date.now());
+      const data = await res.json();
+      if (data.lastUpdate !== lastUpdate) {
+        await fetchFlavors();
+      }
+    } catch (e) {}
+  }
+
+  /* ── Decorative wave rules ── */
+  function drawWaveRule(color, host, vw) {
+    const amp = 4.5, step = 38;
+    let d = 'M0,7';
+    for (let x = 0; x < vw;) {
+      d += ` q${step/2},-${amp} ${step},0 q${step/2},${amp} ${step},0`;
+      x += step * 2;
+    }
+    host.innerHTML = `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.8" stroke-linecap="round" opacity=".45"/>`;
+  }
+
+  /* ── Layout: all sizes calculated from fixed 1920x1080 stage ── */
+  function fitLayout() {
+    const GAP        = 18;
+    const BOTTOM_H   = 220;
+    const gheadMeasured = document.querySelector('.ghead');
+    const GHEAD_H    = gheadMeasured ? gheadMeasured.offsetHeight + 10 /* margin-bottom */ : 64;
+    const TABLICZKA_H = BOTTOM_H - GHEAD_H - 4;
+
+    /* ── Polewy tabliczki ── */
+    const pills = document.getElementById('polewyPills');
+    if (pills && pills.children.length) {
+      const n       = pills.children.length;
+      const totalW  = 1800; /* 1920 - 2*60 padding */
+      const tabW    = Math.floor((totalW - (n - 1) * GAP) / n);
+      const nameSize = n <= 5 ? '22px' : n <= 7 ? '17px' : '14px';
+      const bodyPad  = n <= 5 ? '2px 14px 4px' : '2px 10px 4px';
+      for (var i = 0; i < pills.children.length; i++) {
+        var t = pills.children[i];
+        t.style.width  = tabW + 'px';
+        t.style.height = TABLICZKA_H + 'px';
+        t.style.marginLeft = i === 0 ? '0' : GAP + 'px';
+        var tn = t.querySelector('.t-name');
+        var tb = t.querySelector('.t-body');
+        if (tn) tn.style.fontSize = nameSize;
+        if (tb) tb.style.padding  = bodyPad;
+      }
+    }
+
+    /* ── Icedog ── */
+    const icedog = document.querySelector('.tabliczka-icedog');
+    if (icedog) {
+      icedog.style.height = TABLICZKA_H + 'px';
+      const pills2 = document.getElementById('polewyPills');
+      const n2 = pills2 ? pills2.children.length : 6;
+      const ns = n2 <= 5 ? '22px' : n2 <= 7 ? '17px' : '14px';
+      const bp = n2 <= 5 ? '2px 14px 4px' : '2px 10px 4px';
+      const in_ = icedog.querySelector('.t-name');
+      const ib  = icedog.querySelector('.t-body');
+      if (in_) in_.style.fontSize = ns;
+      if (ib)  ib.style.padding   = bp;
+    }
+
+    /* ── Smaki cards ── */
+    const grid = document.getElementById('smakiGrid');
+    if (!grid || !grid.children.length) return;
+    const count = grid.children.length;
+    const cols  = count <= 3 ? Math.max(1, count) : count <= 6 ? 3 : 4;
+    const rows  = Math.ceil(count / cols);
+
+    /* Measure REAL available width from DOM (avoids hardcoding 1800px) */
+    const smakiEl = document.querySelector('.smaki');
+    const gridW   = smakiEl ? smakiEl.clientWidth : 1800;
+
+    /* Available height: measure from DOM too */
+    const smakiHeadEl = document.querySelector('.smaki-head');
+    const headH = smakiHeadEl ? smakiHeadEl.offsetHeight + 8 : 68;
+    const stageEl = document.getElementById('stage');
+    const stageH  = stageEl ? stageEl.clientHeight : 1080;
+    const headerEl = document.querySelector('header');
+    const bottomEl = document.querySelector('.bottom');
+    const icedogRowEl = document.querySelector('.icedog-row');
+    const footerEl = document.querySelector('footer');
+    const usedH = (headerEl ? headerEl.offsetHeight + 10 : 120)
+                + 12 /* smaki margin-bottom */
+                + headH
+                + (bottomEl ? bottomEl.offsetHeight + 10 : 215)
+                + (icedogRowEl ? icedogRowEl.offsetHeight + 8 : 155)
+                + (footerEl ? footerEl.offsetHeight : 56)
+                + 38; /* stage padding */
+    const smakiGridH = Math.max(100, stageH - usedH);
+
+    const cardW = Math.floor((gridW - (cols - 1) * GAP) / cols);
+    const cardH = Math.floor((smakiGridH - (rows - 1) * GAP) / rows);
+
+    for (var j = 0; j < grid.children.length; j++) {
+      var c = grid.children[j];
+      c.style.width  = cardW + 'px';
+      c.style.height = cardH + 'px';
+      c.style.marginRight  = (j + 1) % cols === 0 ? '0' : GAP + 'px';
+      c.style.marginBottom = j < grid.children.length - cols ? GAP + 'px' : '0';
+    }
+  }
+
+  /* ── Scale stage to viewport ── */
+  function fit() {
+    const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+    document.getElementById('stage').style.transform = 'scale(' + k + ')';
+    fitLayout();
+  }
+
+  function init() {
+    fetchFlavors();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(ping, 10000);
+  }
+
+  /* ── Boot ── */
+  drawWaveRule('#E47972', document.getElementById('waveSmaki'), 800);
+  drawWaveRule('#406767', document.getElementById('wavePolewy'), 800);
+
+  addEventListener('resize', fit);
+  fit();
+
+  document.getElementById('setupUrl').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveSetupUrl();
+  });
+
+  /* Fullscreen on click — przydatne gdy otwierasz w przeglądarce na laptopie */
+  document.addEventListener('click', function() {
+    var el = document.documentElement;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (req) req.call(el);
+  });
+
+  if (MOCK_DATA) {
+    render(MOCK_DATA);
+  } else if (apiUrl) {
+    init();
+  } else {
+    document.getElementById('setup').style.display = 'flex';
+  }
+</script>
+</body>
+</html>
