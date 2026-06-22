@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Debug</title>
+<style>
+  body { font-family: monospace; font-size: 24px; padding: 40px; background: #111; color: #0f0; margin: 0; }
+  .row { margin-bottom: 16px; }
+  .label { color: #888; }
+</style>
+</head>
+<body>
+<div class="row"><span class="label">Browser: </span><span id="ua"></span></div>
+<div class="row"><span class="label">Window: </span><span id="wh"></span></div>
+<div class="row"><span class="label">Screen: </span><span id="sh"></span></div>
+<div class="row"><span class="label">DPR: </span><span id="dpr"></span></div>
+<div class="row"><span class="label">position:fixed: </span><span id="fixed"></span></div>
+<div class="row"><span class="label">CSS Grid: </span><span id="grid"></span></div>
+<div class="row"><span class="label">CSS flex gap: </span><span id="gap"></span></div>
+<script>
+  document.getElementById('ua').textContent = navigator.userAgent;
+  document.getElementById('wh').textContent = window.innerWidth + ' x ' + window.innerHeight;
+  document.getElementById('sh').textContent = screen.width + ' x ' + screen.height;
+  document.getElementById('dpr').textContent = window.devicePixelRatio;
+  // Test position:fixed
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:0;left:0;width:10px;height:10px';
+  document.body.appendChild(t);
+  document.getElementById('fixed').textContent = t.getBoundingClientRect().top === 0 ? 'OK' : 'BROKEN';
+  document.body.removeChild(t);
+  // Test CSS Grid
+  document.getElementById('grid').textContent = typeof CSS !== 'undefined' && CSS.supports('display','grid') ? 'OK' : 'NOT SUPPORTED';
+  // Test flex gap
+  document.getElementById('gap').textContent = typeof CSS !== 'undefined' && CSS.supports('gap','10px') ? 'OK' : 'NOT SUPPORTED';
+</script>
+</body>
+</html>
